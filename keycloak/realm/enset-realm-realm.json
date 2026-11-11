@@ -1,0 +1,67 @@
+{
+  "realm": "enset-realm",
+  "enabled": true,
+  "displayName": "Atelier OAuth2 / OIDC",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "USER", "description": "Créer et consulter ses demandes" },
+      { "name": "ADMIN", "description": "Administrer toutes les demandes" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "react-client",
+      "name": "Application React",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:5173/*"],
+      "webOrigins": ["http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "preferred_username",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-property-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "username",
+            "claim.name": "preferred_username",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "alice",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Alice",
+      "credentials": [{ "type": "password", "value": "alice123", "temporary": false }],
+      "realmRoles": ["USER"]
+    },
+    {
+      "username": "bob",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Bob",
+      "credentials": [{ "type": "password", "value": "bob123", "temporary": false }],
+      "realmRoles": ["USER", "ADMIN"]
+    }
+  ]
+}
