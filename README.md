@@ -1,66 +1,170 @@
-# Atelier OAuth 2.0 / OpenID Connect
+<div align="center">
 
-Application locale de gestion des demandes : **React/Vite** (client OIDC public avec Authorization Code + PKCE), **Spring Boot** (API Resource Server JWT) et **Keycloak** (fournisseur OpenID Connect). Les demandes restent en mémoire et sont perdues au redémarrage de l'API, comme demandé dans l'atelier.
+# Portail de gestion des demandes
+
+Application web de création et de suivi de demandes, avec authentification centralisée et accès contrôlé par rôle.
+
+**React · Spring Boot · Spring Security · Keycloak · OpenID Connect**
+
+</div>
+
+## Présentation
+
+Le portail permet aux utilisateurs de soumettre des demandes et d'en suivre le statut. Les administrateurs disposent d'un espace dédié pour consulter toutes les demandes et les valider ou les refuser.
+
+L'authentification est assurée par Keycloak. Le frontend utilise OpenID Connect avec Authorization Code et PKCE (S256), tandis que l'API Spring Boot valide les jetons JWT et applique les règles d'accès côté serveur.
+
+> **Stockage des demandes :** les données sont conservées en mémoire par l'API et sont perdues lorsque celle-ci redémarre.
+
+## Aperçu
+
+### Espace utilisateur
+
+![Tableau de bord utilisateur](screens/7.png)
+
+*Création et suivi des demandes depuis l'espace personnel.*
+
+### Espace administrateur
+
+![Suivi des demandes par l'administrateur](screens/10.png)
+
+*Consultation de toutes les demandes et traitement de celles en attente.*
+
+## Fonctionnalités
+
+- Connexion et déconnexion via Keycloak.
+- Création et suivi des demandes personnelles.
+- Affichage du statut : en attente, validée ou refusée.
+- Gestion des demandes par les utilisateurs ayant le rôle `ADMIN`.
+- Autorisation vérifiée par l'API, indépendamment de l'affichage du frontend.
+- API protégée par des jetons JWT et configuration CORS limitée au frontend local.
+
+## Technologies
+
+| Composant | Technologies |
+| --- | --- |
+| Frontend | React 19, Vite, `keycloak-js` |
+| API | Java 17+, Spring Boot 3.5, Spring Security |
+| Authentification | Keycloak, OpenID Connect, OAuth 2.0, PKCE |
+| Infrastructure locale | Docker Compose |
 
 ## Prérequis
 
-- Docker Desktop avec Compose
-- Java 17 ou 21 et Maven 3.9+ (ou Maven Wrapper)
-- Node.js 20+ et npm
-- Navigateur moderne
+- Docker Desktop avec Docker Compose.
+- Java 17 ou supérieur et Maven 3.9+.
+- Node.js 20+ et npm.
+- Un navigateur web récent.
 
-## Démarrage
+## Démarrage local
 
-Depuis le dossier `atelier-oauth2` :
+Ouvrez un terminal à la racine du projet, dans le dossier contenant `docker-compose.yml`.
 
-1. Lancer Keycloak : `docker compose up -d`.
-2. Attendre que Keycloak soit prêt sur <http://localhost:8082> (premier démarrage parfois lent). L'import crée automatiquement le realm `enset-realm`, le client `react-client`, les rôles et les comptes du TP.
-3. Dans un terminal : `cd demandes-api` puis `mvn spring-boot:run`.
-4. Dans un autre terminal : `cd demandes-front`, `npm install`, puis `npm run dev`.
-5. Ouvrir <http://localhost:5173>. Keycloak redirige vers l'écran de connexion.
+### 1. Démarrer Keycloak
 
-### Comptes de démonstration
+```bash
+docker compose up -d
+```
 
-| Login | Mot de passe | Rôles |
+Le port hôte **8080** étant susceptible d'être utilisé par un autre service, Keycloak est exposé sur **http://localhost:8082**. Le premier démarrage peut prendre quelques instants. Le realm `enset-realm`, le client `react-client`, les rôles et les comptes de démonstration sont importés depuis `keycloak/realm/enset-realm-realm.json`.
+
+Pour vérifier l'état du conteneur :
+
+```bash
+docker compose ps
+docker compose logs -f keycloak
+```
+
+### 2. Démarrer l'API
+
+Dans un nouveau terminal, depuis la racine du projet :
+
+```bash
+cd demandes-api
+mvn spring-boot:run
+```
+
+L'API est disponible sur **http://localhost:8081**.
+
+### 3. Démarrer le frontend
+
+Dans un autre terminal :
+
+```bash
+cd demandes-front
+npm install
+npm run dev
+```
+
+Ouvrez **http://localhost:5173**. Vous serez redirigé vers Keycloak pour vous connecter.
+
+## Comptes de démonstration
+
+| Identifiant | Mot de passe | Rôle |
 | --- | --- | --- |
-| `alice` | `alice123` | USER |
-| `bob` | `bob123` | USER, ADMIN |
+| `alice` | `alice123` | `USER` |
+| `bob` | `bob123` | `USER`, `ADMIN` |
 
-Console d'administration locale : <http://localhost:8082/admin> (`admin` / `admin`). Identifiants réservés à cet atelier local.
+Console d'administration Keycloak : **http://localhost:8082/admin**. Les identifiants locaux définis dans `docker-compose.yml` sont `admin` / `admin`.
 
-## Endpoints
+> Ces comptes et mots de passe sont réservés à l'environnement local de démonstration. Ne les utilisez pas en production.
 
-| Méthode | Endpoint | Accès |
-| --- | --- | --- |
-| GET | `/api/public` | Public |
-| GET | `/api/profil` | USER ou ADMIN |
-| GET | `/api/demandes` | USER ou ADMIN, demandes du propriétaire connecté |
-| POST | `/api/demandes` | USER ou ADMIN, création au nom du compte connecté |
-| GET | `/api/admin/demandes` | ADMIN, toutes les demandes |
-| PATCH | `/api/admin/demandes/{id}` | ADMIN, statuts `VALIDEE` ou `REFUSEE` |
+## API
 
-Les rôles sont lus depuis `realm_access.roles` du JWT Keycloak et convertis en autorités Spring `ROLE_USER` et `ROLE_ADMIN`. Le contrôle d'accès est effectué côté API, même si le panneau d'administration est masqué dans React. CORS n'autorise que `http://localhost:5173`.
+| Méthode | Route | Accès | Description |
+| --- | --- | --- | --- |
+| `GET` | `/api/public` | Public | Vérifier l'accès à l'API |
+| `GET` | `/api/profil` | `USER`, `ADMIN` | Obtenir le profil connecté |
+| `GET` | `/api/demandes` | `USER`, `ADMIN` | Lister ses demandes |
+| `POST` | `/api/demandes` | `USER`, `ADMIN` | Créer une demande |
+| `GET` | `/api/admin/demandes` | `ADMIN` | Lister toutes les demandes |
+| `PATCH` | `/api/admin/demandes/{id}` | `ADMIN` | Définir le statut `VALIDEE` ou `REFUSEE` |
+
+Les demandes créées doivent contenir un objet non vide, limité à 500 caractères côté interface.
+
+## Sécurité et configuration
+
+- Le client Keycloak `react-client` est un client public utilisant Authorization Code avec PKCE S256.
+- Les flux implicite et d'accès direct par mot de passe sont désactivés.
+- Les rôles `USER` et `ADMIN` sont extraits de `realm_access.roles` du JWT et convertis en autorités Spring.
+- L'API valide l'émetteur du JWT configuré dans `demandes-api/src/main/resources/application.properties`.
+- CORS autorise uniquement `http://localhost:5173`.
+- Les ports locaux sont configurés comme suit : frontend `5173`, API `8081`, Keycloak `8082` (port interne du conteneur `8080`).
 
 ## Vérification manuelle
 
-1. Se connecter comme Alice : créer une demande et vérifier qu'elle apparaît dans « Mes demandes », sans panneau Administration.
-2. Se connecter comme Bob : vérifier l'accès au panneau et à toutes les demandes; valider ou refuser une demande.
-3. Appeler `GET http://localhost:8081/api/demandes` sans jeton : réponse 401.
-4. Appeler `GET http://localhost:8081/api/admin/demandes` avec le jeton d'Alice : réponse 403; avec celui de Bob : réponse 200.
-5. Envoyer un jeton modifié/invalide : réponse 401.
+1. Connectez-vous avec `alice`, créez une demande et vérifiez qu'elle apparaît dans son espace sans panneau d'administration.
+2. Connectez-vous avec `bob`, vérifiez la liste globale et validez ou refusez une demande.
+3. Vérifiez que `GET http://localhost:8081/api/demandes` sans jeton renvoie `401`.
+4. Vérifiez que `GET http://localhost:8081/api/admin/demandes` renvoie `403` pour Alice et `200` pour Bob.
+5. Vérifiez qu'un jeton invalide est refusé avec `401`.
 
-## Configuration Keycloak
+Ne copiez pas de jeton d'accès dans le README, les captures d'écran ou les commits : un JWT porteur doit rester confidentiel.
 
-Le realm est importé au premier démarrage dans `keycloak/realm/enset-realm-realm.json`. Le client est public, le flux standard est activé, les flux implicite et mot de passe sont désactivés, PKCE utilise S256 et les URI de redirection/origines sont limitées à localhost. Pour repartir de zéro après modification du realm, arrêter les services et supprimer le volume avec `docker compose down -v` (cela efface les données locales Keycloak).
-
-## Structure
+## Structure du projet
 
 ```text
-atelier-oauth2/
+.
 ├── docker-compose.yml
-├── keycloak/realm/enset-realm-realm.json
-├── demandes-api/       # Spring Boot 3.5, Spring Security Resource Server
-└── demandes-front/     # React + Vite + keycloak-js
+├── keycloak/
+│   └── realm/
+│       └── enset-realm-realm.json
+├── demandes-api/       # API REST Spring Boot
+├── demandes-front/     # Application React + Vite
+└── screens/            # Captures d'écran de démonstration
 ```
 
-> Les mots de passe et l'administrateur ci-dessus sont uniquement pour un environnement de TP. Ne réutilisez pas ces paramètres pour un déploiement public.
+## Réinitialiser Keycloak
+
+Pour arrêter les services sans supprimer les données :
+
+```bash
+docker compose down
+```
+
+Pour repartir de zéro et supprimer également le volume Keycloak :
+
+```bash
+docker compose down -v
+```
+
+> **Attention :** `docker compose down -v` efface les données locales de Keycloak.
